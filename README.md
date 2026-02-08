@@ -1,112 +1,282 @@
-# HR Management Backend
+# HR Management Backend Documentation
 
-Small Express + Knex + PostgreSQL backend for simple HR attendance management.
+## Project Overview
 
-**Contents**
-- Project overview
-- Prerequisites
-- Setup
-- Database: migrations & seeds
-- Running the app
-- API endpoints (attendance-focused)
-- Notes & next steps
+Small **Express + Knex + PostgreSQL** backend for HR attendance management.
 
+### Purpose
 
-**Project Overview**
-- Server: Node.js + Express
-- Database: PostgreSQL via Knex
-- Purpose: Manage users, employees and attendance records (check-in times)
+* Manage HR users
+* Manage employees
+* Track daily attendance (check-in times)
+* Generate attendance reports
 
+## Project Structure
 
-**Prerequisites**
-- Node.js (v16+ recommended)
-- npm 
-- PostgreSQL
-- `npx knex` available (installed by project devDependencies)
+```
+HR-MANAGEMENT-BACKEND/
+│
+├─ node_modules/
+├─ src/
+│   ├─ config/              # Application config (DB, JWT, etc.)
+│   ├─ controllers/         # Express controllers for routes
+│   ├─ databases/
+│   │   ├─ migrations/      # Knex migration files
+│   │   ├─ seeds/           # Knex seed files
+│   │   └─ setting.ts       # DB connection configuration
+│   ├─ middleware/          # Authentication & custom middleware
+│   ├─ models/              # TypeScript models/interfaces
+│   ├─ repositories/        # Database access layer
+│   ├─ routes/              # Express route definitions
+│   ├─ services/            # Business logic
+│   ├─ types/               # Custom TS types
+│   ├─ utils/               # Utility functions
+│   └─ validation/          # Input validation (Joi, etc.)
+├─ uploads/                 # File uploads (employee photos)
+├─ .env                     # Environment variables (not in repo)
+├─ .env.example             # Example environment variables
+├─ knexfile.ts              # Knex configuration
+├─ package.json
+├─ package-lock.json
+├─ README.md
+└─ postman_collection.json  # Optional: Postman collection
+```
 
+## Prerequisites
 
-**Setup**
+* Node.js v16+
+* npm
+* PostgreSQL
+* npx knex (installed via devDependencies)
+
+## Setup
+
 1. Clone the repo and install dependencies:
 
 ```bash
+git clone <repo-url>
+cd HR-MANAGEMENT-BACKEND
 npm install
 ```
 
-2. Create a `.env` file or otherwise provide environment variables required by the project (example keys used by knex/DB connection). Check `knexfile.ts` and `src/databases/setting.ts` for expected configuration.
+2. Create `.env` file from `.env.example` and update values.
 
-3. Configure your PostgreSQL database and update the connection settings.
+3. Setup PostgreSQL database and update connection in `.env`.
 
+## Database Commands
 
-**Database: migrations & seeds**
-Run migrations and seeds with Knex:
+### Migrations
 
 ```bash
-npx knex migrate:latest --knexfile knexfile.ts
-npx knex seed:run --knexfile knexfile.ts
+npx knex migrate:latest
 ```
 
-The repo contains migration files under `src/databases/migrations` and initial seed(s) under `src/databases/seeds`.
+### Seeders
 
+```bash
+npx knex seed:run
+```
 
-**Run the app (development)**
-Start the server (project scripts may vary):
+### Create Migration
+
+```bash
+npx knex migrate:make migration_name
+```
+
+### Create Seeder
+
+```bash
+npx knex seed:make seed_name
+```
+
+## Running the App (Development)
 
 ```bash
 npm run dev
 ```
 
-(If you use `ts-node` or `ts-node-dev`, ensure the dev script in `package.json` is configured.)
+## API Endpoints
 
+All endpoints except `/auth/login` are **protected** with JWT Bearer Token.
 
-**API: Attendance endpoints**
-All endpoints are under the authentication middleware by default. Adjust tokens/headers accordingly.
+### Authentication
 
-- GET /attendance
-	- Query parameters (all optional):
-		- `employee_id` (number) — filter by employee id
-		- `date` (YYYY-MM-DD) — returns attendance rows for that date
-		- `from` (YYYY-MM-DD) and `to` (YYYY-MM-DD) — date range
-		- `include_absent` (true|1) — when combined with a single `date`, returns all employees and their attendance (present/absent) for that date
-	- Examples:
-		- List all attendance rows: `GET /attendance`
-		- Filter by employee: `GET /attendance?employee_id=5`
-		- Single-date records: `GET /attendance?date=2026-01-14`
-		- Range: `GET /attendance?from=2026-01-01&to=2026-01-31`
-		- Include absent employees for a date: `GET /attendance?date=2026-01-14&include_absent=true`
+#### POST `/auth/login`
 
-- POST /attendance
-	- Body: `{ "employee_id": number, "date": "YYYY-MM-DD", "check_in_time": "HH:MM" }`
-	- Creates or updates a check-in for the employee on that date.
+**Description:** HR user login
+**Body:**
 
-- GET /attendance/:id
-	- Get a single attendance record by id
+```json
+{
+  "email": "hr@example.com",
+  "password": "password123"
+}
+```
 
-- GET /attendance/employee/:employeeId
-	- Get attendance history for a given employee
+**Response:**
 
-- PUT /attendance/:id
-	- Update an attendance record (partial updates accepted)
+```json
+{
+  "success": true,
+  "token": "jwt_token_here",
+  "user": {
+    "id": 1,
+    "name": "HR Admin",
+    "email": "hr@example.com"
+  }
+}
+```
 
-- DELETE /attendance/:id
-	- Delete an attendance record
+### Employees
 
-- GET /attendance/report?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
-	- Get attendance report between two dates
+#### GET `/employees`
 
+**Description:** List all employees
+**Query params (optional):**
 
-**Notes & implementation details**
-- The `attendance` table stores `date` (SQL DATE) and `check_in_time` (SQL TIME). Unique constraint is on `(employee_id, date)`.
-- The controller and service include a new `include_absent` flow that performs a left-join between `employees` and `attendance` to return all employees for a given date, marking `status` as `present` or `absent`.
-- Authentication is applied to the attendance routes via `src/routes/attendance.ts`.
+* `page` — pagination page number
+* `limit` — number of records per page
+* `search` — search by name (partial match)
 
+**Response:**
 
-**Next steps / suggestions**
-- Add API documentation (Swagger/OpenAPI) for clarity and testing.
-- Add example `.env.example` and document required env vars.
-- Add integration tests for the attendance routes.
+```json
+[
+  {
+    "id": 1,
+    "name": "Rahim",
+    "age": 30,
+    "designation": "Developer",
+    "hiring_date": "2025-01-01",
+    "date_of_birth": "1995-02-15",
+    "salary": 50000,
+    "photo_path": "uploads/rahim.jpg"
+  }
+]
+```
 
+#### GET `/employees/:id`
 
-If you'd like, I can:
-- Add a small Postman collection example for the attendance flows,
-- Run a quick smoke test calling the `/attendance` endpoints,
-- Or refine the README content and add a `.env.example` file.
+**Description:** Get single employee by ID
+**Response:**
+
+```json
+{
+  "id": 1,
+  "name": "Rahim",
+  "age": 30,
+  "designation": "Developer",
+  "hiring_date": "2025-01-01",
+  "date_of_birth": "1995-02-15",
+  "salary": 50000,
+  "photo_path": "uploads/rahim.jpg"
+}
+```
+
+#### POST `/employees`
+
+**Description:** Create a new employee
+**Body (multipart/form-data for photo):**
+
+* `name` (required)
+* `age` (required)
+* `designation` (required)
+* `hiring_date` (required)
+* `date_of_birth` (required)
+* `salary` (required)
+* `photo_path` (optional file)
+
+#### PUT `/employees/:id`
+
+**Description:** Update employee details (optional new photo)
+
+#### DELETE `/employees/:id`
+
+**Description:** Delete employee
+
+### Attendance
+
+#### GET `/attendance`
+
+**Description:** List attendance entries
+**Query params (optional):**
+
+* `employee_id`
+* `date` (YYYY-MM-DD)
+* `from` & `to` (date range)
+
+**Example:** `/attendance?employee_id=12&from=2025-08-01&to=2025-08-31`
+
+#### GET `/attendance/:id`
+
+**Description:** Get single attendance entry
+
+#### POST `/attendance`
+
+**Description:** Create or upsert attendance
+**Body:**
+
+```json
+{
+  "employee_id": 1,
+  "date": "2026-02-08",
+  "check_in_time": "09:30"
+}
+```
+
+**Behavior:** If `(employee_id, date)` exists, updates `check_in_time` instead of creating duplicate.
+
+#### PUT `/attendance/:id`
+
+**Description:** Update attendance entry
+
+#### DELETE `/attendance/:id`
+
+**Description:** Delete attendance entry
+
+### Reports
+
+#### GET `/reports/attendance`
+
+**Description:** Monthly attendance summary
+**Query params:**
+
+* `month` — required, format `YYYY-MM`
+* `employee_id` — optional
+
+**Response per employee:**
+
+```json
+[
+  {
+    "employee_id": 1,
+    "name": "Rahim",
+    "days_present": 20,
+    "times_late": 3
+  }
+]
+```
+
+**Late rule:** check-in after 09:45 counts as late.
+
+## Example Queries
+
+* Search employee by name: `/employees?name=rahim`
+* Filter attendance: `/attendance?employee_id=12&from=2025-08-01&to=2025-08-31`
+* Monthly report: `/reports/attendance?month=2025-08`
+
+## Notes
+
+* `attendance` table: `date` (SQL DATE), `check_in_time` (SQL TIME)
+* Unique constraint on `(employee_id, date)`
+* JWT authentication applied to all `/employees` and `/attendance` routes
+* Employee photos stored in `uploads/`
+
+## Example `.env.example`
+
+```env
+PORT=3000
+DATABASE_URL=postgres://postgres:password@localhost:5432/hr_db
+JWT_SECRET=your_jwt_secret
+CLOUDINARY_URL=your_cloudinary_url
+```

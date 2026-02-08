@@ -37,59 +37,75 @@ export class AttendanceController {
         next: NextFunction
     ): Promise<void> {
         try {
-            const { employee_id, date, from, to } = req.query as Record<string, any>;
+            const { employee_id, date, from, to, include_absent } = req.query as Record<string, any>;
 
-            // Validate employee_id
-            if (employee_id !== undefined && String(employee_id).length > 0) {
-                if (isNaN(Number(employee_id))) {
-                    res.status(400).json({ success: false, message: 'employee_id must be a number', data: [] });
-                    return;
-                }
+            // employee_id validation
+            if (employee_id && isNaN(Number(employee_id))) {
+                res.status(400).json({
+                    success: false,
+                    message: 'employee_id must be a number',
+                    data: []
+                });
+                return;
             }
 
-            // If filtering by employee_id, require both from and to range
-            if (employee_id !== undefined && String(employee_id).length > 0) {
-                if (!from || !to) {
-                    res.status(400).json({ success: false, message: 'When filtering by employee_id, both from and to dates are required', data: [] });
-                    return;
-                }
-            }
-
-            // Validate dates
-            const dateVals = { date, from, to };
-            for (const [k, v] of Object.entries(dateVals)) {
-                if (v !== undefined && String(v).length > 0) {
-                    const d = new Date(String(v));
+            // date validation
+            const validateDate = (value: any, field: string) => {
+                if (value) {
+                    const d = new Date(String(value));
                     if (isNaN(d.getTime())) {
-                        res.status(400).json({ success: false, message: `${k} must be a valid date`, data: [] });
-                        return;
+                        res.status(400).json({
+                            success: false,
+                            message: `${field} must be a valid date`,
+                            data: []
+                        });
+                        return false;
                     }
                 }
-            }
+                return true;
+            };
+
+            if (!validateDate(date, 'date')) return;
+            if (!validateDate(from, 'from')) return;
+            if (!validateDate(to, 'to')) return;
 
             const filters: any = {};
-            if (employee_id !== undefined && String(employee_id).length > 0) filters.employee_id = Number(employee_id);
+
+            if (employee_id) filters.employee_id = Number(employee_id);
             if (date) filters.date = String(date);
             if (from) filters.from = String(from);
             if (to) filters.to = String(to);
+            // support include_absent=true to return all employees for a date with attendance if any
+            if (include_absent === 'true' || include_absent === '1' || include_absent === true) {
+                filters.include_absent = true;
+            }
 
             const rows = await this.attendanceService.listAttendance(filters);
 
+            const requestedDate = date ? String(date) : null;
+
             const data = rows.map((r) => ({
-                id: r.id,
+                id: r.id ?? null,
                 employee_id: r.employee_id,
-                date: (r.date instanceof Date ? r.date.toISOString().split('T')[0] : String(r.date)),
-                check_in: (r as any).check_in_time ?? (r as any).check_in ?? null,
-                check_out: (r as any).check_out_time ?? (r as any).check_out ?? null,
-                created_at: r.created_at,
-                updated_at: r.updated_at,
+                employee_name: r.employee_name ?? null,
+                date: r.date ?? requestedDate,
+                check_in: r.check_in_time ?? null,
+                status: r.check_in_time ? 'present' : 'absent',
+                created_at: r.created_at ?? null,
+                updated_at: r.updated_at ?? null,
             }));
 
-            res.status(200).json({ success: true, message: 'Attendance retrieved successfully', data });
+            res.status(200).json({
+                success: true,
+                message: 'Attendance retrieved successfully',
+                data
+            });
+
         } catch (error) {
             next(error);
         }
     }
+
 
     async getAttendanceById(
         req: Request,

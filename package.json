@@ -1,5 +1,5 @@
 {
-  "name": "nodejs-typescript-knexjs-boilerplate",
+  "name": "hr-management-api",
   "version": "2.0.0",
   "description": "Enterprise-grade Node.js TypeScript API with OOP, Express, Knex, PostgreSQL",
   "main": "build/index.js",
@@ -32,7 +32,7 @@
     "husky": "^8.0.3",
     "nodemon": "^3.0.2",
     "prettier": "^3.1.0",
-    "pretty-quick": "^3.1.3",
+    "pretty-quick": "^4.2.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },

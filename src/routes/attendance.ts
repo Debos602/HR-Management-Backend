@@ -24,12 +24,10 @@ export const createAttendanceRoutes = (knex: Knex): Router => {
     // Examples:
     //  - GET /attendance/date/2025-08-12
     //  - GET /attendance/date (no date, same as /attendance)
-    router.get('/attendance/date/:date?', (req, res, next) =>
+    router.get('/attendance', (req, res, next) =>
         attendanceController.listAttendance(req, res, next)
     );
-    router.get('/attendance/by-date', (req, res, next) =>
-        attendanceController.getAttendanceByDate(req, res, next)
-    );
+
 
     // Constrain id route to digits to prevent collision with other param routes
     router.get('/attendance/:id(\\d+)', (req, res, next) =>

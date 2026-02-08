@@ -101,4 +101,22 @@ export class AttendanceRepository {
 
         return qb;
     }
+
+    async listForDateAllEmployees(date: Date): Promise<any[]> {
+        const formatted = date.toISOString().split('T')[0];
+
+        return this.knex('employees as e')
+            .leftJoin('attendance as a', 'e.id', 'a.employee_id')
+            .whereRaw('(a.date = ? OR a.date IS NULL)', [formatted])
+            .select(
+                'e.id as employee_id',
+                'e.name as employee_name',
+                'a.id',
+                'a.date',
+                'a.check_in_time',
+                'a.created_at',
+                'a.updated_at'
+            )
+            .orderBy('e.name', 'asc');
+    }
 }

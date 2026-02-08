@@ -119,7 +119,25 @@ export class AttendanceService {
         date?: Date | string;
         from?: Date | string;
         to?: Date | string;
-    }): Promise<Attendance[]> {
-        return this.attendanceRepository.list(filters);
+        include_absent?: boolean;
+    }): Promise<any[]> {
+        // If caller requested to include absent employees for a single date,
+        // return the left-joined employees + attendance rows. Otherwise
+        // return normal attendance rows filtered by the provided filters.
+        if (
+            filters.date &&
+            filters.employee_id === undefined &&
+            !filters.from &&
+            !filters.to &&
+            filters.include_absent
+        ) {
+            const dateObj = typeof filters.date === 'string' ? new Date(filters.date) : (filters.date as Date);
+            if (isNaN(dateObj.getTime())) {
+                throw new AppError('Invalid date provided', 400);
+            }
+            return this.attendanceRepository.listForDateAllEmployees(dateObj);
+        }
+
+        return this.attendanceRepository.list(filters) as Promise<any[]>;
     }
 }
